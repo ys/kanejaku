@@ -1,4 +1,4 @@
-package kanejaku
+package metric
 
 import (
 	"database/sql"
@@ -9,14 +9,26 @@ import (
 	"time"
 )
 
-var db *sql.DB
+type Metric struct {
+	Key       string
+	Value     string
+	Timestamp string
+}
 
-func AddMetric(key string, value float32, timestamp time.Time) {
+// type Metric struct {
+// 	Key       string     `json:"key"`
+// 	Value     float32    `json:"value"`
+// 	Timestamp *time.Time `json:"timestamp"`
+// }
+
+var Db *sql.DB
+
+func Add(key string, value float32, timestamp time.Time) {
 	if timestamp.IsZero() {
 		timestamp = time.Now().UTC()
 	}
 	sStmt := "insert into metrics(key, value, timestamp) values ($1, $2, $3)"
-	stmt, err := db.Prepare(sStmt)
+	stmt, err := Db.Prepare(sStmt)
 	defer stmt.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -27,13 +39,12 @@ func AddMetric(key string, value float32, timestamp time.Time) {
 	}
 }
 
-func main() {
+func InitDB() {
 	url := os.Getenv("DATABASE_URL")
 	var err error
-	db, err = sql.Open("postgres", url)
-	defer db.Close()
+	Db, err = sql.Open("postgres", url)
+	defer Db.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
-	AddMetric("cool.gang", 23.0, time.Time{})
 }
