@@ -7,14 +7,17 @@ import (
 
 func Run() {
 	metric.InitDB()
-	bourbon.Run(metrics())
-
+	metrics().Run()
 }
 
 func metrics() bourbon.Bourbon {
 	b := bourbon.New()
+	b.Get("/metrics", func() (int, bourbon.Encodeable) {
+		return 418, "TEAPOT"
+	})
 	b.Post("/metrics", func(m metric.Metric) (int, bourbon.Encodeable) {
-		return 201, m
+		println("LOL")
+		return 201, "tto"
 	})
 	return b
 }
