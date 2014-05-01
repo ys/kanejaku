@@ -6,8 +6,6 @@ import (
 )
 
 func Run() {
-	db := metric.InitDB()
-	defer db.Close()
 	metrics().Run()
 }
 
