@@ -10,9 +10,9 @@ import (
 )
 
 type Metric struct {
-	Key       string
-	Value     string
-	Timestamp string
+	Key       string  `json:"key",db:"key"`
+	Value     float32 `json:"value",db:"value"`
+	Timestamp int64   `json:"timestamp",db:"timestamp"`
 }
 
 // type Metric struct {
