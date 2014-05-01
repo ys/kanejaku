@@ -22,6 +22,11 @@ type Metric struct {
 // }
 
 var Db *sql.DB
+func AddMany(metrics []Metric) {
+	for _, m := range metrics {
+		Add(m)
+	}
+}
 
 func Add(key string, value float32, timestamp time.Time) {
 	if timestamp.IsZero() {
