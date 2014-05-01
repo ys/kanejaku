@@ -6,7 +6,8 @@ import (
 )
 
 func Run() {
-	metric.InitDB()
+	db := metric.InitDB()
+	defer db.Close()
 	metrics().Run()
 }
 
@@ -19,6 +20,8 @@ func metrics() bourbon.Bourbon {
 		metric.AddMany(metrics)
 		return 201, metrics
 	})
+	b.Get("/metrics/{key}", func(params bourbon.Params) (int, bourbon.Encodeable) {
+		return 200, metric.Get(params["key"])
 	})
 	return b
 }
