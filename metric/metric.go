@@ -41,6 +41,16 @@ func Add(m Metric) {
 	}
 }
 
+func Get(key string) []Metric {
+	result := []Metric{}
+	err := Db.Select(&result, "SELECT MAX(key) AS key, avg(value) AS value, (ROUND(timestamp / 30) * 30)::bigint as timestamp FROM metrics WHERE key = $1 GROUP BY timestamp ORDER BY timestamp DESC", key)
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	return result
+}
+
 func InitDB() *sqlx.DB {
 	url := os.Getenv("DATABASE_URL")
 	var err error
