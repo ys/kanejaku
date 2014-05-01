@@ -28,17 +28,18 @@ func AddMany(metrics []Metric) {
 	}
 }
 
-func Add(key string, value float32, timestamp time.Time) {
-	if timestamp.IsZero() {
-		timestamp = time.Now().UTC()
+func Add(m Metric) {
+	if m.Timestamp == 0 {
+		m.Timestamp = time.Now().UTC().Unix()
 	}
+	fmt.Println(time.Unix(m.Timestamp, 0))
 	sStmt := "insert into metrics(key, value, timestamp) values ($1, $2, $3)"
 	stmt, err := Db.Prepare(sStmt)
 	defer stmt.Close()
 	if err != nil {
 		log.Fatal(err)
 	}
-	res, err := stmt.Exec(key, value, timestamp)
+	res, err := stmt.Exec(m.Key, m.Value, m.Timestamp)
 	if err != nil || res == nil {
 		log.Fatal(err)
 	}
