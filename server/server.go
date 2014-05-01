@@ -15,9 +15,10 @@ func metrics() bourbon.Bourbon {
 	b.Get("/metrics", func() (int, bourbon.Encodeable) {
 		return 418, "TEAPOT"
 	})
-	b.Post("/metrics", func(m metric.Metric) (int, bourbon.Encodeable) {
-		println("LOL")
-		return 201, "tto"
+	b.Post("/metrics", func(metrics []metric.Metric) (int, bourbon.Encodeable) {
+		metric.AddMany(metrics)
+		return 201, metrics
+	})
 	})
 	return b
 }
