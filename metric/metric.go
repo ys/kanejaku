@@ -1,7 +1,8 @@
 package metric
 
 import (
-	"database/sql"
+	"fmt"
+	"github.com/jmoiron/sqlx"
 	_ "github.com/joho/godotenv/autoload"
 	_ "github.com/lib/pq"
 	"log"
@@ -15,13 +16,8 @@ type Metric struct {
 	Timestamp int64   `json:"timestamp",db:"timestamp"`
 }
 
-// type Metric struct {
-// 	Key       string     `json:"key"`
-// 	Value     float32    `json:"value"`
-// 	Timestamp *time.Time `json:"timestamp"`
-// }
+var Db *sqlx.DB
 
-var Db *sql.DB
 func AddMany(metrics []Metric) {
 	for _, m := range metrics {
 		Add(m)
@@ -45,12 +41,12 @@ func Add(m Metric) {
 	}
 }
 
-func InitDB() {
+func InitDB() *sqlx.DB {
 	url := os.Getenv("DATABASE_URL")
 	var err error
-	Db, err = sql.Open("postgres", url)
-	defer Db.Close()
+	Db, err = sqlx.Open("postgres", url)
 	if err != nil {
 		log.Fatal(err)
 	}
+	return Db
 }
