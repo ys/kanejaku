@@ -42,6 +42,21 @@ func TestGet(t *testing.T) {
 	teardown(t)
 }
 
+func TestGetKeys(t *testing.T) {
+	setup(t)
+	timestamp := time.Now().Unix()
+	insertMetric("key", 1, timestamp)
+	insertMetric("key1", 1, timestamp)
+	keys := S.GetKeys()
+	if len(keys) != 2 {
+		t.Error("Must have 2 keys")
+	}
+	if keys[0] != "key" || keys[1] != "key1" {
+		t.Error("Keys are ordered")
+	}
+	teardown(t)
+}
+
 func setup(t *testing.T) {
 	env := ".env.test"
 	if os.Getenv("TRAVIS") == "true" {
@@ -54,6 +69,7 @@ func setup(t *testing.T) {
 	S = &DefaultStore{}
 	S.InitDB()
 	DB = S.DB
+	DB.Exec("TRUNCATE TABLE metrics")
 }
 
 func teardown(t *testing.T) {

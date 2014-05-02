@@ -12,6 +12,7 @@ type Store interface {
 	AddMany(metrics []Metric)
 	Add(m Metric)
 	Get(key string) []Metric
+	GetKeys() []string
 }
 
 type DefaultStore struct {

@@ -18,16 +18,17 @@ func (s *DefaultServer) Run() {
 }
 
 func (s *DefaultServer) metrics() bourbon.Bourbon {
+	store := s.Store
 	b := bourbon.New()
 	b.Get("/metrics", func() (int, bourbon.Encodeable) {
-		return 418, "TEAPOT"
+		return 200, store.GetKeys()
 	})
 	b.Post("/metrics", func(metrics []metric.Metric) (int, bourbon.Encodeable) {
-		s.Store.AddMany(metrics)
+		store.AddMany(metrics)
 		return 201, metrics
 	})
 	b.Get("/metrics/{key}", func(params bourbon.Params) (int, bourbon.Encodeable) {
-		return 200, s.Store.Get(params["key"])
+		return 200, store.Get(params["key"])
 	})
 	return b
 }

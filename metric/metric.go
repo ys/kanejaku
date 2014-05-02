@@ -58,3 +58,20 @@ func (s *DefaultStore) Get(key string) []Metric {
 	}
 	return result
 }
+
+func (s *DefaultStore) GetKeys() []string {
+	keys := []string{}
+	rows, err := s.DB.Query("SELECT DISTINCT key FROM metrics ORDER BY key ASC")
+	if err != nil {
+		log.Println(err)
+		return nil
+	}
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			log.Fatal(err)
+		}
+		keys = append(keys, key)
+	}
+	return keys
+}
