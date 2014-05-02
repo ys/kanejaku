@@ -1,5 +1,5 @@
 language: go
-script: go test -race ./...
+script: go test ./...
 addons:
   postgresql: "9.3"
 before_script:
