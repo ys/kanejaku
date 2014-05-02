@@ -7,7 +7,8 @@ import (
 )
 
 func main() {
-	metric.DB = metric.InitDB()
-	defer metric.DB.Close()
-	server.Run()
+	store := metric.NewDefaultStore()
+	defer store.Close()
+	s := &server.DefaultServer{Store: store}
+	s.Run()
 }
