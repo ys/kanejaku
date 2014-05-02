@@ -1,5 +1,10 @@
 language: go
-script: go test -race
+script: go test -race ./...
+addons:
+  postgresql: "9.3"
+before_script:
+  - psql -c 'create database kanejaku_test;' -U postgres
+  - psql -d kanejaku_test -U postgres -c '\i schema.sql'
 go:
   - 1.1
   - 1.2
