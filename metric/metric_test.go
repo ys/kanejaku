@@ -4,6 +4,7 @@ import (
 	"github.com/joho/godotenv"
 	"log"
 	"math"
+	"os"
 	"testing"
 	"time"
 )
@@ -38,7 +39,11 @@ func TestGet(t *testing.T) {
 }
 
 func setup(t *testing.T) {
-	err := godotenv.Load(".env.test")
+	env := ".env.test"
+	if os.Getenv("TRAVIS") == "true" {
+		env = ".env.travis"
+	}
+	err := godotenv.Load(env)
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
