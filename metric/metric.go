@@ -1,12 +1,8 @@
 package metric
 
 import (
-	"database/sql"
 	"fmt"
-	_ "github.com/joho/godotenv/autoload"
-	_ "github.com/lib/pq"
 	"log"
-	"os"
 	"time"
 )
 
@@ -16,21 +12,19 @@ type Metric struct {
 	Timestamp int64   `json:"timestamp",db:"timestamp"`
 }
 
-var DB *sql.DB
-
-func AddMany(metrics []Metric) {
+func (s *DefaultStore) AddMany(metrics []Metric) {
 	for _, m := range metrics {
-		Add(m)
+		s.Add(m)
 	}
 }
 
-func Add(m Metric) {
+func (s *DefaultStore) Add(m Metric) {
 	if m.Timestamp == 0 {
 		m.Timestamp = time.Now().UTC().Unix()
 	}
 	fmt.Println(time.Unix(m.Timestamp, 0))
 	sStmt := "insert into metrics(key, value, timestamp) values ($1, $2, $3)"
-	stmt, err := DB.Prepare(sStmt)
+	stmt, err := s.DB.Prepare(sStmt)
 	defer stmt.Close()
 	if err != nil {
 		log.Fatal(err)
@@ -41,9 +35,9 @@ func Add(m Metric) {
 	}
 }
 
-func Get(key string) []Metric {
+func (s *DefaultStore) Get(key string) []Metric {
 	result := []Metric{}
-	rows, err := DB.Query(`SELECT MAX(key) AS key,
+	rows, err := s.DB.Query(`SELECT MAX(key) AS key,
                                       AVG(value) AS value,
                                       (ROUND(timestamp / 30) * 30)::bigint as timestamp
                                FROM metrics
@@ -63,14 +57,4 @@ func Get(key string) []Metric {
 		result = append(result, m)
 	}
 	return result
-}
-
-func InitDB() *sql.DB {
-	url := os.Getenv("DATABASE_URL")
-	var err error
-	db, err := sql.Open("postgres", url)
-	if err != nil {
-		log.Fatal(err)
-	}
-	return db
 }

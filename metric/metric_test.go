@@ -1,6 +1,7 @@
 package metric
 
 import (
+	"database/sql"
 	"github.com/joho/godotenv"
 	"log"
 	"math"
@@ -9,9 +10,12 @@ import (
 	"time"
 )
 
+var S *DefaultStore
+var DB *sql.DB
+
 func TestAdd(t *testing.T) {
 	setup(t)
-	Add(Metric{Key: "key", Value: 1, Timestamp: 1398978882})
+	S.Add(Metric{Key: "key", Value: 1, Timestamp: 1398978882})
 	m := &Metric{}
 	err := DB.QueryRow("SELECT key, value, timestamp FROM metrics LIMIT 1").Scan(&m.Key, &m.Value, &m.Timestamp)
 	if err != nil {
@@ -27,7 +31,7 @@ func TestGet(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().Unix()
 	insertMetric("key", 1, timestamp)
-	metrics := Get("key")
+	metrics := S.Get("key")
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
@@ -47,7 +51,9 @@ func setup(t *testing.T) {
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}
-	DB = InitDB()
+	S = &DefaultStore{}
+	S.InitDB()
+	DB = S.DB
 }
 
 func teardown(t *testing.T) {
