@@ -35,10 +35,13 @@ func (s *DefaultStore) Add(m Metric) {
 	}
 }
 
-func (s *DefaultStore) Get(key string, function string) []Metric {
+func (s *DefaultStore) Get(key string, function string, resolution int) []Metric {
 	result := []Metric{}
 	if function == "" {
 		function = "avg"
+	}
+	if resolution == 0 {
+		resolution = 30
 	}
 	rows, err := s.DB.Query(`SELECT MAX(key) AS key,
                                         (CASE $2
@@ -48,12 +51,12 @@ func (s *DefaultStore) Get(key string, function string) []Metric {
                                          ELSE avg(value)
                                          END
                                         ) AS value,
-                                        (ROUND(timestamp / 30) * 30)::bigint as timestamp
+                                        (ROUND(timestamp / $3) * $3)::bigint as timestamp
                                FROM metrics
                                WHERE key = $1
                                AND extract(epoch from (now() - interval '1 hour')) < timestamp
-                               GROUP BY (ROUND(timestamp / 30) * 30)
-                               ORDER BY (ROUND(timestamp / 30) * 30) DESC`, key, function)
+                               GROUP BY (ROUND(timestamp / $3) * $3)
+                               ORDER BY (ROUND(timestamp / $3) * $3) DESC`, key, function, resolution)
 	if err != nil {
 		log.Println(err)
 		return nil

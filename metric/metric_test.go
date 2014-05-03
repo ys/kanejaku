@@ -31,7 +31,7 @@ func TestGet(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().Unix()
 	insertMetric("key", 1, timestamp)
-	metrics := S.Get("key", "")
+	metrics := S.Get("key", "", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
@@ -42,12 +42,28 @@ func TestGet(t *testing.T) {
 	teardown(t)
 }
 
+func TestGetGrouped(t *testing.T) {
+	setup(t)
+	timestamp := time.Now().Unix()
+	insertMetric("key", 1, timestamp)
+	insertMetric("key", 1, timestamp+31)
+	metrics := S.Get("key", "", 0)
+	if len(metrics) != 2 {
+		t.Error("Error was expecting one row")
+	}
+	metrics = S.Get("key", "", 60)
+	if len(metrics) != 1 {
+		t.Error("Error was expecting one row")
+	}
+	teardown(t)
+}
+
 func TestGetAverage(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().Unix()
 	insertMetric("key", 1, timestamp)
 	insertMetric("key", 1, timestamp+1)
-	metrics := S.Get("key", "avg")
+	metrics := S.Get("key", "avg", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
@@ -63,7 +79,7 @@ func TestGetSum(t *testing.T) {
 	timestamp := time.Now().Unix()
 	insertMetric("key", 1, timestamp)
 	insertMetric("key", 1, timestamp+1)
-	metrics := S.Get("key", "sum")
+	metrics := S.Get("key", "sum", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
@@ -80,7 +96,7 @@ func TestGetCount(t *testing.T) {
 	timestamp := time.Now().Unix()
 	insertMetric("key", 10, timestamp)
 	insertMetric("key", 1, timestamp+1)
-	metrics := S.Get("key", "count")
+	metrics := S.Get("key", "count", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
