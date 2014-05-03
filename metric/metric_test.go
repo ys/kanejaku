@@ -42,12 +42,12 @@ func TestGet(t *testing.T) {
 	teardown(t)
 }
 
-func TestGetGrouped(t *testing.T) {
+func TestGetAggregated(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().Unix()
-	timestamp = int64(math.Floor(float64(timestamp/30)) * 30)
+	timestamp = int64(math.Floor(float64(timestamp/60)) * 60)
 	insertMetric("key", 1, timestamp)
-	insertMetric("key", 1, timestamp+31)
+	insertMetric("key", 1, timestamp+40)
 	metrics := S.Get("key", "", 0)
 	if len(metrics) != 2 {
 		t.Error("Error was expecting two rows")
@@ -139,18 +139,26 @@ func TestGetMin(t *testing.T) {
 	teardown(t)
 }
 
-func TestGetPerc(t *testing.T) {
+func TestGetPercAndMedian(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().Unix()
 	for i := 1; i <= 100; i = i + 1 {
 		insertMetric("key", float32(i), timestamp)
 	}
-	metrics := S.Get("key", "perc90", 0)
+	metrics := S.Get("key", "median", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
 	m := metrics[0]
-	if m.Key != "key" || int(m.Value) != 90 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
+	if int(m.Value) != 50 {
+		t.Error("Metric should have a 90 value")
+	}
+	metrics = S.Get("key", "perc90", 0)
+	if len(metrics) != 1 {
+		t.Error("Error was expecting one row")
+	}
+	m = metrics[0]
+	if int(m.Value) != 90 {
 		t.Error("Metric should have a 90 value")
 	}
 	metrics = S.Get("key", "perc95", 0)
@@ -158,7 +166,7 @@ func TestGetPerc(t *testing.T) {
 		t.Error("Error was expecting one row")
 	}
 	m = metrics[0]
-	if m.Key != "key" || int(m.Value) != 95 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
+	if int(m.Value) != 95 {
 		t.Error("Metric should have a 95 value")
 	}
 	metrics = S.Get("key", "perc99", 0)
@@ -166,7 +174,7 @@ func TestGetPerc(t *testing.T) {
 		t.Error("Error was expecting one row")
 	}
 	m = metrics[0]
-	if m.Key != "key" || int(m.Value) != 99 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
+	if int(m.Value) != 99 {
 		t.Error("Metric should have a 99 value")
 	}
 	teardown(t)
