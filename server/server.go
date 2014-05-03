@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/daneharrigan/bourbon"
 	"github.com/ys/kanejaku/metric"
+	"net/http"
 	"strconv"
 )
 
@@ -28,9 +29,10 @@ func (s *DefaultServer) metrics() bourbon.Bourbon {
 		store.AddMany(metrics)
 		return 201, metrics
 	})
-	b.Get("/metrics/{key}", func(params bourbon.Params) (int, bourbon.Encodeable) {
-		resolution, _ := strconv.Atoi(params["resolution"])
-		return 200, store.Get(params["key"], params["function"], resolution)
+	b.Get("/metrics/{key}", func(req *http.Request, params bourbon.Params) (int, bourbon.Encodeable) {
+		queryParams := req.URL.Query()
+		resolution, _ := strconv.Atoi(queryParams.Get("resolution"))
+		return 200, store.Get(params["key"], queryParams.Get("function"), resolution)
 	})
 	return b
 }
