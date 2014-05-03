@@ -31,12 +31,62 @@ func TestGet(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().Unix()
 	insertMetric("key", 1, timestamp)
-	metrics := S.Get("key")
+	metrics := S.Get("key", "")
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
 	m := metrics[0]
 	if m.Key != "key" || m.Value != 1 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
+		t.Error("Metric not correct")
+	}
+	teardown(t)
+}
+
+func TestGetAverage(t *testing.T) {
+	setup(t)
+	timestamp := time.Now().Unix()
+	insertMetric("key", 1, timestamp)
+	insertMetric("key", 1, timestamp+1)
+	metrics := S.Get("key", "avg")
+	if len(metrics) != 1 {
+		t.Error("Error was expecting one row")
+	}
+	m := metrics[0]
+	if m.Key != "key" || m.Value != 1 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
+		t.Error("Metric not correct")
+	}
+	teardown(t)
+}
+
+func TestGetSum(t *testing.T) {
+	setup(t)
+	timestamp := time.Now().Unix()
+	insertMetric("key", 1, timestamp)
+	insertMetric("key", 1, timestamp+1)
+	metrics := S.Get("key", "sum")
+	if len(metrics) != 1 {
+		t.Error("Error was expecting one row")
+	}
+	m := metrics[0]
+	log.Println(m)
+	if m.Key != "key" || m.Value != 2 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
+		t.Error("Metric not correct")
+	}
+	teardown(t)
+}
+
+func TestGetCount(t *testing.T) {
+	setup(t)
+	timestamp := time.Now().Unix()
+	insertMetric("key", 10, timestamp)
+	insertMetric("key", 1, timestamp+1)
+	metrics := S.Get("key", "count")
+	if len(metrics) != 1 {
+		t.Error("Error was expecting one row")
+	}
+	m := metrics[0]
+	log.Println(m)
+	if m.Key != "key" || m.Value != 2 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
 		t.Error("Metric not correct")
 	}
 	teardown(t)
