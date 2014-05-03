@@ -45,9 +45,15 @@ func (s *DefaultStore) Get(key string, function string, resolution int) []Metric
 	}
 	rows, err := s.DB.Query(`SELECT MAX(key) AS key,
                                         (CASE $2
-                                         WHEN 'avg'   THEN avg(value)
-                                         WHEN 'sum'   THEN sum(value)
-                                         WHEN 'count' THEN count(value)
+                                         WHEN 'avg'       THEN avg(value)
+                                         WHEN 'sum'       THEN sum(value)
+                                         WHEN 'count'     THEN count(value)
+                                         WHEN 'median'    THEN median(value)
+                                         WHEN 'max'       THEN max(value)
+                                         WHEN 'min'       THEN min(value)
+                                         WHEN 'perc90'    THEN percentile_cont(array_agg(value), 0.90)
+                                         WHEN 'perc95'    THEN percentile_cont(array_agg(value), 0.95)
+                                         WHEN 'perc99'    THEN percentile_cont(array_agg(value), 0.99)
                                          ELSE avg(value)
                                          END
                                         ) AS value,
