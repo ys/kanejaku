@@ -11,7 +11,7 @@ import (
 type Store interface {
 	AddMany(metrics []Metric)
 	Add(m Metric)
-	Get(key string) []Metric
+	Get(key string, function string, resolution int) []Metric
 	GetKeys() []string
 }
 
