@@ -3,6 +3,7 @@ package server
 import (
 	"github.com/daneharrigan/bourbon"
 	"github.com/ys/kanejaku/metric"
+	"strconv"
 )
 
 type Server interface {
@@ -28,7 +29,8 @@ func (s *DefaultServer) metrics() bourbon.Bourbon {
 		return 201, metrics
 	})
 	b.Get("/metrics/{key}", func(params bourbon.Params) (int, bourbon.Encodeable) {
-		return 200, store.Get(params["key"])
+		resolution, _ := strconv.Atoi(params["resolution"])
+		return 200, store.Get(params["key"], params["function"], resolution)
 	})
 	return b
 }
