@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"github.com/joho/godotenv"
 	"log"
-	"math"
 	"os"
 	"testing"
 	"time"
@@ -15,43 +14,46 @@ var DB *sql.DB
 
 func TestAdd(t *testing.T) {
 	setup(t)
-	S.Add(Metric{Key: "key", Value: 1, Timestamp: 1398978882})
+	timestamp := time.Now().UTC().Round(1 * time.Millisecond)
+	S.Add(Metric{Key: "key", Value: 1, Timestamp: &timestamp})
 	m := &Metric{}
 	err := DB.QueryRow("SELECT key, value, timestamp FROM metrics LIMIT 1").Scan(&m.Key, &m.Value, &m.Timestamp)
 	if err != nil {
 		t.Errorf("Err '%s' while getting row", err)
 	}
-	if m.Key != "key" || m.Value != 1 || m.Timestamp != 1398978882 {
-		t.Errorf("Metric not correct: '%v'", m)
+	if m.Key != "key" || m.Value != 1 || !m.Timestamp.UTC().Equal(timestamp) {
+		t.Errorf("Metric not correct: '%v', %v", m, timestamp)
 	}
 	teardown(t)
 }
 
 func TestGet(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now().UTC().Round(1 * time.Millisecond)
+
 	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
 	}
 	m := metrics[0]
-	if m.Key != "key" || m.Value != 1 || m.Timestamp != int64(math.Floor(float64(timestamp/30))*30) {
-		t.Errorf("Metric not correct: '%v'", m)
+	if m.Key != "key" || m.Value != 1 || !m.Timestamp.UTC().Equal(timestamp.Round(30*time.Second)) {
+		t.Errorf("Metric not correct: '%v', %v", m, timestamp.Round(30*time.Second))
 	}
 	teardown(t)
 }
 
 func TestGetAggregated(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
-	timestamp = int64(math.Floor(float64(timestamp/60)) * 60)
+	timestamp := time.Now().Round(1 * time.Minute)
 	insertMetric("key", 1, timestamp)
-	insertMetric("key", 1, timestamp+40)
+	// Rounding first is going to the minute and this to the 30s when rounding by 30
+	insertMetric("key", 1, timestamp.Add(25*time.Second))
 	metrics := S.Get("key", "", 0)
 	if len(metrics) != 2 {
 		t.Error("Error was expecting two rows")
 	}
+	// both are rounded to the minute
 	metrics = S.Get("key", "", 60)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row, it should have been aggregated")
@@ -61,9 +63,9 @@ func TestGetAggregated(t *testing.T) {
 
 func TestGetAverage(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	insertMetric("key", 1, timestamp)
-	insertMetric("key", 1, timestamp+1)
+	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "avg", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
@@ -77,9 +79,9 @@ func TestGetAverage(t *testing.T) {
 
 func TestGetSum(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	insertMetric("key", 1, timestamp)
-	insertMetric("key", 1, timestamp+1)
+	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "sum", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
@@ -93,9 +95,9 @@ func TestGetSum(t *testing.T) {
 
 func TestGetCount(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	insertMetric("key", 10, timestamp)
-	insertMetric("key", 1, timestamp+1)
+	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "count", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
@@ -109,9 +111,9 @@ func TestGetCount(t *testing.T) {
 
 func TestGetMax(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	insertMetric("key", 10, timestamp)
-	insertMetric("key", 1, timestamp+1)
+	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "max", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
@@ -125,9 +127,9 @@ func TestGetMax(t *testing.T) {
 
 func TestGetMin(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	insertMetric("key", 10, timestamp)
-	insertMetric("key", 1, timestamp+1)
+	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "min", 0)
 	if len(metrics) != 1 {
 		t.Error("Error was expecting one row")
@@ -141,7 +143,7 @@ func TestGetMin(t *testing.T) {
 
 func TestGetPercAndMedian(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	for i := 1; i <= 100; i = i + 1 {
 		insertMetric("key", float32(i), timestamp)
 	}
@@ -182,7 +184,7 @@ func TestGetPercAndMedian(t *testing.T) {
 
 func TestGetKeys(t *testing.T) {
 	setup(t)
-	timestamp := time.Now().Unix()
+	timestamp := time.Now()
 	insertMetric("key", 1, timestamp)
 	insertMetric("key1", 1, timestamp)
 	keys := S.GetKeys()
@@ -217,6 +219,6 @@ func teardown(t *testing.T) {
 	}
 }
 
-func insertMetric(key string, value float32, timestamp int64) {
+func insertMetric(key string, value float32, timestamp time.Time) {
 	DB.Exec("INSERT INTO metrics(key, value, timestamp) VALUES ($1, $2, $3)", key, value, timestamp)
 }
