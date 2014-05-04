@@ -52,25 +52,13 @@ func (s *DefaultStore) Get(key string, function string, resolution int) []Metric
 		resolution = 30
 	}
 	rows, err := s.DB.Query(`SELECT MAX(key) AS key,
-                                        (CASE $2
-                                         WHEN 'avg'       THEN avg(value)
-                                         WHEN 'sum'       THEN sum(value)
-                                         WHEN 'count'     THEN count(value)
-                                         WHEN 'median'    THEN median(value)
-                                         WHEN 'max'       THEN max(value)
-                                         WHEN 'min'       THEN min(value)
-                                         WHEN 'perc90'    THEN percentile_cont(array_agg(value), 0.90)
-                                         WHEN 'perc95'    THEN percentile_cont(array_agg(value), 0.95)
-                                         WHEN 'perc99'    THEN percentile_cont(array_agg(value), 0.99)
-                                         ELSE avg(value)
-                                         END
-                                        ) AS value,
-                                        round_timestamp(timestamp, $3) as timestamp
+                                        `+toSQLFunction(function)+`AS value,
+                                        round_timestamp(timestamp, $2) as timestamp
                                FROM metrics
                                WHERE key = $1
                                AND (now() - interval '1 hour') < timestamp
-                               GROUP BY round_timestamp(timestamp, $3)
-                               ORDER BY timestamp DESC`, key, function, resolution)
+                               GROUP BY round_timestamp(timestamp, $2)
+                               ORDER BY timestamp DESC`, key, resolution)
 	if err != nil {
 		log.Println(err)
 		return result
@@ -103,4 +91,32 @@ func (s *DefaultStore) GetKeys() []string {
 		keys = append(keys, key)
 	}
 	return keys
+}
+
+func toSQLFunction(function string) string {
+	var sqlFunction string
+	switch function {
+	case "avg":
+		sqlFunction = "avg(value)"
+	case "sum":
+		sqlFunction = "sum(value)"
+	case "count":
+		sqlFunction = "count(value)"
+	case "median":
+		sqlFunction = "median(value)"
+	case "max":
+		sqlFunction = "max(value)"
+	case "min":
+		sqlFunction = "min(value)"
+	case "perc90":
+		sqlFunction = "percentile_cont(array_agg(value), 0.90)"
+	case "perc95":
+		sqlFunction = "percentile_cont(array_agg(value), 0.95)"
+	case "perc99":
+		sqlFunction = "percentile_cont(array_agg(value), 0.99)"
+	default:
+		sqlFunction = "avg(value)"
+	}
+
+	return sqlFunction
 }
