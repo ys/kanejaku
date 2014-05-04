@@ -37,7 +37,8 @@ func (s *DefaultStore) Add(m Metric) Metric {
 	}
 	res, err := stmt.Exec(m.Key, m.Value, m.Timestamp)
 	if err != nil || res == nil {
-		log.Fatal(err)
+		log.Println(err)
+		return Metric{}
 	}
 	return m
 }
@@ -72,12 +73,13 @@ func (s *DefaultStore) Get(key string, function string, resolution int) []Metric
                                ORDER BY timestamp DESC`, key, function, resolution)
 	if err != nil {
 		log.Println(err)
-		return nil
+		return result
 	}
 	for rows.Next() {
 		var m Metric
 		if err := rows.Scan(&m.Key, &m.Value, &m.Timestamp); err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			return result
 		}
 		m.TimestampInt = m.Timestamp.Unix()
 		result = append(result, m)
@@ -90,12 +92,13 @@ func (s *DefaultStore) GetKeys() []string {
 	rows, err := s.DB.Query("SELECT DISTINCT key FROM metrics ORDER BY key ASC")
 	if err != nil {
 		log.Println(err)
-		return nil
+		return keys
 	}
 	for rows.Next() {
 		var key string
 		if err := rows.Scan(&key); err != nil {
-			log.Fatal(err)
+			log.Println(err)
+			return keys
 		}
 		keys = append(keys, key)
 	}
