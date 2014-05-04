@@ -8,6 +8,11 @@ CREATE TABLE metrics(
 );
 
 CREATE INDEX index_on_metrics_for_key_and_timestamp ON metrics(key, timestamp);
+CREATE INDEX index_on_metrics_1 ON metrics(key, round_timestamp(timestamp, 1));
+CREATE INDEX index_on_metrics_10 ON metrics(key, round_timestamp(timestamp, 10));
+CREATE INDEX index_on_metrics_30 ON metrics(key, round_timestamp(timestamp, 30));
+CREATE INDEX index_on_metrics_60 ON metrics(key, round_timestamp(timestamp, 60));
+CREATE INDEX index_on_metrics_300 ON metrics(key, round_timestamp(timestamp, 300));
 
 -- Found on https://stackoverflow.com/questions/14300004/postgresql-equivalent-of-oracles-percentile-cont-function/14309370#14309370
 
