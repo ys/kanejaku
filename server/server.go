@@ -23,16 +23,18 @@ func (s *DefaultServer) metrics() bourbon.Bourbon {
 	store := s.Store
 	b := bourbon.New()
 	b.Get("/metrics", func() (int, bourbon.Encodeable) {
-		return 200, store.GetKeys()
+		keys := store.GetKeys()
+		return 200, keys
 	})
 	b.Post("/metrics", func(metrics []metric.Metric) (int, bourbon.Encodeable) {
-		store.AddMany(metrics)
+		metrics = store.AddMany(metrics)
 		return 201, metrics
 	})
 	b.Get("/metrics/{key}", func(req *http.Request, params bourbon.Params) (int, bourbon.Encodeable) {
 		queryParams := req.URL.Query()
 		resolution, _ := strconv.Atoi(queryParams.Get("resolution"))
-		return 200, store.Get(params["key"], queryParams.Get("function"), resolution)
+		metrics := store.Get(params["key"], queryParams.Get("function"), resolution)
+		return 200, metrics
 	})
 	return b
 }

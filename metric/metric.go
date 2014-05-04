@@ -12,13 +12,16 @@ type Metric struct {
 	TimestampInt int64      `json:"timestamp"`
 }
 
-func (s *DefaultStore) AddMany(metrics []Metric) {
+func (s *DefaultStore) AddMany(metrics []Metric) []Metric {
+	results := []Metric{}
 	for _, m := range metrics {
-		s.Add(m)
+		m := s.Add(m)
+		results = append(results, m)
 	}
+	return results
 }
 
-func (s *DefaultStore) Add(m Metric) {
+func (s *DefaultStore) Add(m Metric) Metric {
 	if m.TimestampInt == 0 {
 		if m.Timestamp == nil || m.Timestamp.IsZero() {
 			t := time.Now().UTC()
@@ -36,6 +39,7 @@ func (s *DefaultStore) Add(m Metric) {
 	if err != nil || res == nil {
 		log.Fatal(err)
 	}
+	return m
 }
 
 func (s *DefaultStore) Get(key string, function string, resolution int) []Metric {
