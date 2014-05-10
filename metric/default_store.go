@@ -1,10 +1,10 @@
 package metric
 
 import (
-	"database/sql"
 	_ "github.com/joho/godotenv/autoload"
-	_ "github.com/lib/pq"
+	"github.com/ys/influxdb-go"
 	"log"
+	"net/url"
 	"os"
 )
 
@@ -12,28 +12,48 @@ type Store interface {
 	AddMany(metrics []Metric) []Metric
 	Add(m Metric) Metric
 	Get(key string, function string, resolution int) []Metric
-	GetKeys() []string
 }
 
 type DefaultStore struct {
-	DB *sql.DB
+	DB *influxdb.Client
 }
 
 func NewDefaultStore() *DefaultStore {
 	store := &DefaultStore{}
-	store.InitDB()
+	store.InitClient()
 	return store
 }
 
-func (s *DefaultStore) InitDB() {
-	url := os.Getenv("DATABASE_URL")
-	var err error
-	s.DB, err = sql.Open("postgres", url)
+func (s *DefaultStore) InitClient() {
+	influxUrl := os.Getenv("DATABASE_URL")
+	u, err := url.Parse(influxUrl)
+	if err != nil {
+		log.Fatal(err)
+	}
+	var username string
+	var password string
+	if u.User != nil {
+		username = u.User.Username()
+		var is_set bool
+		password, is_set = u.User.Password()
+		if !is_set {
+			password = ""
+		}
+	} else {
+		username = ""
+		password = ""
+	}
+	config := &influxdb.ClientConfig{
+		Host:     u.Host,
+		Database: u.Path[1:],
+		Username: username,
+		Password: password,
+	}
+	s.DB, err = influxdb.NewClient(config)
 	if err != nil {
 		log.Fatal(err)
 	}
 }
 
 func (s *DefaultStore) Close() {
-	s.DB.Close()
 }

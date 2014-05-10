@@ -1,7 +1,9 @@
 package metric
 
 import (
+	"github.com/ys/influxdb-go"
 	"log"
+	"strconv"
 	"time"
 )
 
@@ -29,94 +31,73 @@ func (s *DefaultStore) Add(m Metric) Metric {
 		}
 		m.TimestampInt = m.Timestamp.Unix()
 	}
-	sStmt := "insert into metrics(key, value, timestamp) values ($1, $2, $3)"
-	stmt, err := s.DB.Prepare(sStmt)
-	defer stmt.Close()
-	if err != nil {
-		log.Fatal(err)
+	series := []*influxdb.Series{
+		&influxdb.Series{
+			Name:    m.Key,
+			Columns: []string{"time", "value"},
+			Points: [][]interface{}{
+				[]interface{}{m.Timestamp.Unix(), m.Value},
+			},
+		},
 	}
-	res, err := stmt.Exec(m.Key, m.Value, m.Timestamp)
-	if err != nil || res == nil {
-		log.Println(err)
-		return Metric{}
-	}
+	DB.WriteSeries(series)
 	return m
 }
 
 func (s *DefaultStore) Get(key string, function string, resolution int) []Metric {
 	result := []Metric{}
 	if function == "" {
-		function = "avg"
+		function = "MEAN"
 	}
 	if resolution == 0 {
 		resolution = 30
 	}
-	rows, err := s.DB.Query(`SELECT MAX(key) AS key,
-                                        `+toSQLFunction(function)+`AS value,
-                                        round_timestamp(timestamp, $2) as timestamp
-                               FROM metrics
-                               WHERE key = $1
-                               AND (now() - interval '1 hour') < timestamp
-                               GROUP BY round_timestamp(timestamp, $2)
-                               ORDER BY timestamp DESC`, key, resolution)
+	// moment := time.Now().Add(-1 * time.Hour).Format("2006-01-02 03:04:00")
+	query := "SELECT " + toFunction(function) + " FROM " + key + " group by time(" + strconv.Itoa(resolution) + "s)"
+	series, err := s.DB.Query(query)
 	if err != nil {
 		log.Println(err)
 		return result
 	}
-	for rows.Next() {
-		var m Metric
-		if err := rows.Scan(&m.Key, &m.Value, &m.Timestamp); err != nil {
-			log.Println(err)
-			return result
+	for _, serie := range series {
+		for _, point := range serie.Points {
+			timestamp := time.Unix(int64(point[0].(float64)), 0).UTC()
+			m := Metric{
+				Key:          serie.Name,
+				Value:        float32(point[1].(float64)),
+				TimestampInt: int64(point[0].(float64)),
+				Timestamp:    &timestamp,
+			}
+			result = append(result, m)
 		}
-		m.TimestampInt = m.Timestamp.Unix()
-		result = append(result, m)
 	}
 	return result
 }
 
-func (s *DefaultStore) GetKeys() []string {
-	keys := []string{}
-	rows, err := s.DB.Query("SELECT DISTINCT key FROM metrics ORDER BY key ASC")
-	if err != nil {
-		log.Println(err)
-		return keys
-	}
-	for rows.Next() {
-		var key string
-		if err := rows.Scan(&key); err != nil {
-			log.Println(err)
-			return keys
-		}
-		keys = append(keys, key)
-	}
-	return keys
-}
-
-func toSQLFunction(function string) string {
-	var sqlFunction string
+func toFunction(function string) string {
+	var queryFunction string
 	switch function {
-	case "avg":
-		sqlFunction = "avg(value)"
+	case "mean":
+		queryFunction = "mean(value)"
 	case "sum":
-		sqlFunction = "sum(value)"
+		queryFunction = "sum(value)"
 	case "count":
-		sqlFunction = "count(value)"
+		queryFunction = "count(value)"
 	case "median":
-		sqlFunction = "median(value)"
+		queryFunction = "median(value)"
 	case "max":
-		sqlFunction = "max(value)"
+		queryFunction = "max(value)"
 	case "min":
-		sqlFunction = "min(value)"
+		queryFunction = "min(value)"
 	case "perc90":
-		sqlFunction = "percentile_cont(array_agg(value), 0.90)"
+		queryFunction = "percentile(value, 90)"
 	case "perc95":
-		sqlFunction = "percentile_cont(array_agg(value), 0.95)"
+		queryFunction = "percentile(value, 95)"
 	case "perc99":
-		sqlFunction = "percentile_cont(array_agg(value), 0.99)"
+		queryFunction = "percentile(value, 99)"
 	default:
-		sqlFunction = "avg(value)"
+		queryFunction = "mean(value)"
 	}
 
-	return sqlFunction
+	return queryFunction
 }

@@ -1,8 +1,8 @@
 package metric
 
 import (
-	"database/sql"
 	"github.com/joho/godotenv"
+	"github.com/ys/influxdb-go"
 	"log"
 	"os"
 	"testing"
@@ -10,27 +10,11 @@ import (
 )
 
 var S *DefaultStore
-var DB *sql.DB
-
-func TestAdd(t *testing.T) {
-	setup(t)
-	timestamp := time.Now().UTC().Round(1 * time.Millisecond)
-	S.Add(Metric{Key: "key", Value: 1, Timestamp: &timestamp})
-	m := &Metric{}
-	err := DB.QueryRow("SELECT key, value, timestamp FROM metrics LIMIT 1").Scan(&m.Key, &m.Value, &m.Timestamp)
-	if err != nil {
-		t.Errorf("Err '%s' while getting row", err)
-	}
-	if m.Key != "key" || m.Value != 1 || !m.Timestamp.UTC().Equal(timestamp) {
-		t.Errorf("Metric not correct: '%v', %v", m, timestamp)
-	}
-	teardown(t)
-}
+var DB *influxdb.Client
 
 func TestGet(t *testing.T) {
 	setup(t)
 	timestamp := time.Now().UTC().Round(1 * time.Millisecond)
-
 	insertMetric("key", 1, timestamp)
 	metrics := S.Get("key", "", 0)
 	if len(metrics) != 1 {
@@ -182,21 +166,6 @@ func TestGetPercAndMedian(t *testing.T) {
 	teardown(t)
 }
 
-func TestGetKeys(t *testing.T) {
-	setup(t)
-	timestamp := time.Now()
-	insertMetric("key", 1, timestamp)
-	insertMetric("key1", 1, timestamp)
-	keys := S.GetKeys()
-	if len(keys) != 2 {
-		t.Error("Must have 2 keys")
-	}
-	if keys[0] != "key" || keys[1] != "key1" {
-		t.Error("Keys are ordered")
-	}
-	teardown(t)
-}
-
 func setup(t *testing.T) {
 	env := ".env.test"
 	if os.Getenv("TRAVIS") == "true" {
@@ -207,18 +176,26 @@ func setup(t *testing.T) {
 		log.Fatal("Error loading .env file")
 	}
 	S = &DefaultStore{}
-	S.InitDB()
+	S.InitClient()
 	DB = S.DB
-	DB.Exec("TRUNCATE TABLE metrics")
+	log.Println(DB.DeleteSerie("key"))
+	DB.DeleteSerie("key1")
 }
 
 func teardown(t *testing.T) {
-	DB.Exec("TRUNCATE TABLE metrics")
-	if err := DB.Close(); err != nil {
-		t.Errorf("Error '%s' was not expected while closing the database", err)
-	}
+	DB.DeleteSerie("key")
+	DB.DeleteSerie("key1")
 }
 
 func insertMetric(key string, value float32, timestamp time.Time) {
-	DB.Exec("INSERT INTO metrics(key, value, timestamp) VALUES ($1, $2, $3)", key, value, timestamp)
+	series := []*influxdb.Series{
+		&influxdb.Series{
+			Name:    key,
+			Columns: []string{"time", "value"},
+			Points: [][]interface{}{
+				[]interface{}{timestamp.Unix(), value},
+			},
+		},
+	}
+	DB.WriteSeries(series)
 }
